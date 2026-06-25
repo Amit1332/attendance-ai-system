@@ -8,9 +8,12 @@ const config_1 = __importDefault(require("./config/config"));
 const socket_1 = require("./utils/socket");
 // import dbConnection from "./config/database";
 const messages_1 = require("./constants/messages");
+const aiSettings_1 = require("./utils/aiSettings");
 let server;
 const startServer = async () => {
     try {
+        // Load AI Settings from database
+        await (0, aiSettings_1.initializeAISettings)();
         // Connect Database
         // await dbConnection();
         // Start Express Server

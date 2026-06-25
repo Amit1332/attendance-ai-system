@@ -5,11 +5,15 @@ import config from "./config/config";
 import { initSocket } from "./utils/socket";
 // import dbConnection from "./config/database";
 import { SUCCESS_MESSAGES } from "./constants/messages";
+import { initializeAISettings } from "./utils/aiSettings";
 
 let server: HttpServer;
 
 const startServer = async (): Promise<void> => {
   try {
+    // Load AI Settings from database
+    await initializeAISettings();
+
     // Connect Database
     // await dbConnection();
 

@@ -3,32 +3,92 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateLocalEmbedding = exports.stem = exports.stopwords = exports.saveAISettings = exports.getAISettings = void 0;
+exports.generateLocalEmbedding = exports.stem = exports.stopwords = exports.saveAISettings = exports.initializeAISettings = exports.getAISettings = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const prisma_1 = __importDefault(require("../config/prisma"));
 const settingsPath = path_1.default.join(__dirname, "../config/ai-settings.json");
 const defaultSettings = {
     provider: "OPENAI",
     openaiApiKey: "",
     groqApiKey: "",
 };
+let cachedSettings = null;
+let isInitialized = false;
 const getAISettings = () => {
-    try {
-        if (fs_1.default.existsSync(settingsPath)) {
-            const fileData = fs_1.default.readFileSync(settingsPath, "utf-8");
-            return JSON.parse(fileData);
+    if (!isInitialized || !cachedSettings) {
+        try {
+            if (fs_1.default.existsSync(settingsPath)) {
+                const fileData = fs_1.default.readFileSync(settingsPath, "utf-8");
+                cachedSettings = JSON.parse(fileData);
+            }
         }
+        catch (e) {
+            console.error("Failed to read local AI settings fallback.", e);
+        }
+        if (!cachedSettings) {
+            cachedSettings = { ...defaultSettings };
+        }
+        isInitialized = true;
     }
-    catch (e) {
-        console.error("Failed to read AI settings, using defaults.", e);
-    }
-    return defaultSettings;
+    return cachedSettings;
 };
 exports.getAISettings = getAISettings;
+const initializeAISettings = async () => {
+    try {
+        const settingsList = await prisma_1.default.systemSetting.findMany({
+            where: {
+                key: {
+                    in: ["ai_provider", "openai_api_key", "groq_api_key"],
+                },
+            },
+        });
+        const settingsMap = new Map(settingsList.map((s) => [s.key, s.value]));
+        const dbSettings = {
+            provider: settingsMap.get("ai_provider") || "OPENAI",
+            openaiApiKey: settingsMap.get("openai_api_key") || "",
+            groqApiKey: settingsMap.get("groq_api_key") || "",
+        };
+        cachedSettings = dbSettings;
+        isInitialized = true;
+        console.log("AI settings successfully loaded from database.");
+    }
+    catch (e) {
+        console.error("Failed to load AI settings from database, using local config/defaults.", e);
+        (0, exports.getAISettings)(); // Fallback to local file / defaults
+    }
+};
+exports.initializeAISettings = initializeAISettings;
 const saveAISettings = (settings) => {
     try {
         const current = (0, exports.getAISettings)();
         const updated = { ...current, ...settings };
+        // Update cache
+        cachedSettings = updated;
+        isInitialized = true;
+        // Save to Database asynchronously
+        const saveToDb = async () => {
+            try {
+                const keysToSave = [
+                    { key: "ai_provider", value: updated.provider },
+                    { key: "openai_api_key", value: updated.openaiApiKey || "" },
+                    { key: "groq_api_key", value: updated.groqApiKey || "" },
+                ];
+                for (const item of keysToSave) {
+                    await prisma_1.default.systemSetting.upsert({
+                        where: { key: item.key },
+                        update: { value: item.value },
+                        create: { key: item.key, value: item.value },
+                    });
+                }
+                console.log("AI settings successfully saved to database.");
+            }
+            catch (dbErr) {
+                console.error("Failed to save AI settings to database:", dbErr);
+            }
+        };
+        saveToDb();
+        // Local file fallback backup
         const dir = path_1.default.dirname(settingsPath);
         if (!fs_1.default.existsSync(dir)) {
             fs_1.default.mkdirSync(dir, { recursive: true });
