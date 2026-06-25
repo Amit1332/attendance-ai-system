@@ -4,51 +4,6 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 
 ---
 
-## 🚀 Setup Steps
-
-### 1. Database Setup
-* Go to [Supabase](https://supabase.com) and create a free project.
-* Copy the database connection string (URI) from your database settings.
-
----
-
-### 2. Server Setup (Backend)
-* Open a terminal window and go to the `server` folder:
-  ```bash
-  cd server
-  ```
-* Create a new file named `.env` and fill it with these keys:
-  ```env
-  PORT=5000
-  DATABASE_URL="your-supabase-connection-string"
-  JWT_SECRET="choose-any-secret-password-string"
-  OPENAI_API_KEY="your-openai-api-key"
-  GROQ_API_KEY="your-groq-api-key"
-  ```
-* Run these commands in order:
-  ```bash
-  npm install
-  npx prisma db push
-  npx prisma generate
-  npm run dev
-  ```
-
----
-
-### 3. Client Setup (Frontend)
-* Open a new terminal window and go to the `client` folder:
-  ```bash
-  cd client
-  ```
-* Run these commands in order:
-  ```bash
-  npm install
-  npm run dev
-  ```
-* Open your browser and go to: [http://localhost:5173](http://localhost:5173)
-
----
-
 ## 👥 Role-Based Access Guide
 
 - **Admin Pages:**
@@ -72,32 +27,84 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 
 ---
 
+## 🚀 Setup Steps
+
+### 1. Database Setup
+
+- Go to [Supabase](https://supabase.com) and create a free project.
+- Copy the database connection string (URI) from your database settings.
+
+---
+
+### 2. Server Setup (Backend)
+
+- Open a terminal window and go to the `server` folder:
+  ```bash
+  cd server
+  ```
+- Create a new file named `.env` and fill it with these keys:
+  ```env
+  PORT=5000
+  DATABASE_URL="your-supabase-connection-string"
+  JWT_SECRET="choose-any-secret-password-string"
+  OPENAI_API_KEY="your-openai-api-key"
+  GROQ_API_KEY="your-groq-api-key"
+  ```
+- Run these commands in order:
+  ```bash
+  npm install
+  npx prisma db push
+  npx prisma generate
+  npm run dev
+  ```
+
+---
+
+### 3. Client Setup (Frontend)
+
+- Open a new terminal window and go to the `client` folder:
+  ```bash
+  cd client
+  ```
+- Run these commands in order:
+  ```bash
+  npm install
+  npm run dev
+  ```
+- Open your browser and go to: [http://localhost:5173](http://localhost:5173)
+
+---
+
 ## 💬 Developer Prompts to Setup and Create This Project
 
-- How do I set up a PostgreSQL database on Supabase and get the connection string for my app?
+- How do I set up a PostgreSQL databse on Supabase and get the connection string for my app?
 - Can you make a template for a backend `.env` file that includes PORT, DATABASE_URL, JWT_SECRET, and keys for OpenAI and Groq?
 - What commands do I need to run to install packages, push the Prisma schema to Supabase, generate the client, and start the backend server in dev mode?
-- How do I get into the client folder, install React dependencies, and start the Vite dev server?
-- Help me set up a new project with a backend folder called 'server' using Node/Express and a frontend folder called 'client' using React + Vite. Give me a good root gitignore file too.
-- Set up TypeScript for the Express backend. I need a tsconfig file that builds everything into a dist folder and has strict type checks enabled.
-- Create a script using Prisma to seed my database with some fake users (an Admin, a Manager, and a couple of Staff accounts) and check-in logs so I have test data.
-- Can you add helmet, cors, compression, rate-limiting, and request logging with morgan and winston to my backend? Make sure the server logs requests and errors nicely.
+- how do I get in client folder, install react dependecies and start vite dev server
+- help me setup new project with backend folder called server using node express and frontend called client using react vite, also give a good root gitignore
+- setup typescript for express backend, I need a tsconfig file that build everything in dist folder and strict check enabled
+- create a script using prisma to seed my database with some fake user like one admin, manager and staff accounts and checkin logs so I have test data
+- can you add helmet, cors, compression, rate limiting, and request loging with morgan and winston, make sure it log request and errors nicely
+- can you design prisma schema for postgresql databse for user accounts with roles ADMIN, MANAGER, STAFF and self relation for manager and staff
+- design the schema for attendance logs, each record link to user, checkin checkout dates, workign hours and overtime hours as decimals
+- write prisma models for store uploaded documents. We need Document table for meta like title and filename and DocumentChunk to store text and embedding using pgvector
+- create SystemSetting model to store config settings as key value pairs like provider, openai key and groq key so they persist in db
 - Create my database tables using Prisma connected to Supabase: I need tables for Users, Attendance logs, policy Documents, policy Document Chunks with vector support, and System Settings.
-- Implement sign-up, sign-in, and refresh token endpoints using bcryptjs and jsonwebtoken. Let's validate the request bodies using zod schemas.
-- I need check-in and check-out APIs that calculate working hours and set anything over 8 hours as overtime. Use socket.io to update the dashboard live.
-- Write an endpoint for uploading policy PDFs. Parse the text using pdf-parse, break it into chunks of 800 characters with 100 character overlap, generate OpenAI embeddings (with a free local hashing fallback if key is missing), and save them using pgvector.
-- Build the main AI endpoint. If staff queries, search the policy chunks with a custom keyword stemmer/re-ranker (no DB tool access). If managers query, they can ask about attendance but only for their direct reports. Admins get full tool access to list users and attendance.
-- Set up a clean React frontend with Vite, Tailwind/Vanilla CSS, axios, and socket.io-client. Build a sidebar layout that hides or shows pages depending on if the user is an admin, manager, or staff.
-- Build the check-in panel for the dashboard. Show a clock, a check-in toggle button, and a live counter showing hours worked like '1hr 15 min'. Show their history table below.
-- Show attendance graphs using recharts on the manager and admin dashboards, showing weekly trends and working hours.
-- Add employee profile settings where staff can fill in their skills and experience. Save these as text embeddings so we can search for developers or staff semantically.
-- Make sure the check-in timer doesn't reset to zero if the page is refreshed. Fetch the active session from the database and resume it automatically.
-- Send a real-time toast alert to the manager's dashboard whenever one of their direct reports checks in or out.
-- Create a user management list where admins can activate/deactivate accounts or change their roles with a simple dropdown.
-- Let admins save or clear their OpenAI/Groq keys in the settings panel. If they leave them blank, fall back to the environment variables.
-- If an admin deletes a document, make sure it deletes all its chunks and vector embeddings from the database too.
-- Build a responsive sidebar layout where the links shown depend on the logged-in user's role. If they're STAFF, only show them the Dashboard and AI Policy Chat. If they're a MANAGER, let them see Dashboard, Team Reports, and AI Assistant. If they're an ADMIN, let them see everything including Document Uploads, User Management, and AI settings.
-- Create a Dashboard view that changes its panels based on roles: staff should see their own personal check-in stats and hours worked; managers should see a grid of their direct reports with quick summary cards; admins should see total system stats.
-- Inside the AI Assistant page, hide the Reports tab from Staff users completely so they only see the Policy Chat tab. Managers and Admins should be able to switch between the Policy Chat and the database-connected Reports Assistant.
-- Make sure routes are protected on the React side! If a STAFF user tries to manually type `/settings` or `/upload` in the URL, redirect them back to the dashboard with an error alert.
-- Create a Settings page where admins can enter and save their own OpenAI API Key or Groq API Key, choose which AI provider to use as the default LLM (OpenAI or Groq), and save these settings directly to the database. The server should dynamically use the key saved in the database, and if the database settings are blank or deleted, automatically fall back to using the keys set in the server's `.env` environment file.
+- implemet signup, login, and refresh token endpoints using bcrypt and jwt, validate request body using zod
+- I need checkin checkout api that calculate workign hours and set over 8 hours as overtime, use socket.io to update dashboard live
+- write endpoint to upload policy pdf, parse text using pdf-parse, make chunks of 800 chars and 100 overlap, generate openai embedings and save using pgvector
+- build AI endpoint, if staff ask search policy chunks with custom keyword stemmer (no db access), if manager ask they can get attendance of direct reports only, admin get full tool access
+- setup clean react frontend using vite, css, axios and socket.io, build sidebar layout that hide/show pages depending user is admin, manager or staff
+- build checkin panel on dashboard, show clock, checkin toggle button and live counter of workign hours like 1hr 15 min, show history table below
+- show attendance graph using recharts on manager and admin dashboards showing weekly trends
+- add employee profile settings where staff can fill skills and experience, save these as text embeding so we can search semantically
+- make sure checkin timer does not reset to zero if page refreshed, fetch active session from db and resume
+- send real time toast alert to manager dashboard when direct report checkin checkout
+- create user management list where admin can activate deactivate account or change roles with dropdown
+- let admin save/clear openai groq keys in settings, if blank use env variables
+- if admin delete doc make sure it delete all chunks and embedings from database too
+- build sidebar layout where links depend on user role. if staff only show dashboard and policy chat, if manager show reports too, if admin show settings and document uploads
+- create dashboard page that change base on role: staff see own checkin timer and logs, manager see reports stats cards, admin see system stats
+- in AI Assistant page hide reports tab from staff so they only see policy chat, manager and admin can switch between policy chat and reports
+- make sure routes are protected on react side, if staff try to type url manually redirect them dashboard
+- create settings page where admin can save open ai and groq key, select default provider, save to db, server should dynamic use key from database, and if blank fallback to env key
