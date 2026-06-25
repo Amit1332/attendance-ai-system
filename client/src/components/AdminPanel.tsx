@@ -3,7 +3,6 @@ import api from "../utils/api";
 import { useSocket } from "../context/SocketContext";
 import {
   Users,
-  Activity,
   Calendar,
   Upload,
   Bot,
@@ -28,6 +27,18 @@ import {
 interface AdminPanelProps {
   activeTab: string;
 }
+
+const formatHours = (hours: number | null | undefined): string => {
+  if (hours === null || hours === undefined) return "-";
+  if (hours === 0) return "0 min";
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hrs > 0) {
+    return mins > 0 ? `${hrs}hr ${mins} min` : `${hrs}hr`;
+  }
+  return `${mins} min`;
+};
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
   const { stats, liveEvents } = useSocket();
@@ -369,7 +380,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
                       }} />
                       <div style={styles.feedContent}>
                         <span style={styles.feedText}>
-                          <strong>{ev.employeeName}</strong> ({ev.role}) clocked {ev.type === "checkin" ? "in" : "out"}
+                          <strong>{ev.employeeName}</strong> ({ev.role}) checked {ev.type === "checkin" ? "in" : "out"}
                         </span>
                         <span style={styles.feedTime}>{ev.time}</span>
                       </div>
@@ -523,12 +534,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
                     <td style={styles.td}>{a.user.role}</td>
                     <td style={styles.td}>{new Date(a.checkIn).toLocaleString()}</td>
                     <td style={styles.td}>{a.checkOut ? new Date(a.checkOut).toLocaleString() : <span className="status-badge active">Checked In</span>}</td>
-                    <td style={styles.td}>{a.workingHours !== null ? `${a.workingHours} hrs` : "-"}</td>
+                    <td style={styles.td}>{formatHours(a.workingHours)}</td>
                     <td style={styles.td}>
                       {a.overtimeHours > 0 ? (
-                        <span className="status-badge warning">{a.overtimeHours} hrs Overtime</span>
+                        <span className="status-badge warning">{formatHours(a.overtimeHours)} Overtime</span>
                       ) : (
-                        "0 hrs"
+                        "0 min"
                       )}
                     </td>
                   </tr>
@@ -542,7 +553,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
       {/* Tab: Knowledge Base (RAG) */}
       {activeTab === "knowledge-base" && (
         <div style={styles.content}>
-          <h3 style={styles.sectionTitle}>Company Document Knowledge Base (RAG Pipeline)</h3>
+          <h3 style={styles.sectionTitle}>Company Document Knowledge Base</h3>
           
           <div style={styles.ragGrid}>
             {/* Upload form */}
@@ -621,19 +632,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
                   </div>
                 )}
               </div>
-
-              <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
-                <h5 style={{ ...styles.cardHeaderTitle, fontSize: "14px" }}><Activity size={16} /> Pipeline Information</h5>
-                <ul style={{ ...styles.explainList, marginTop: "10px" }}>
-                  <li>Extracts PDF text and chunks into overlapping snippets (~800 characters).</li>
-                  <li>Generates 1536-dimension vector embeddings.</li>
-                  <li>Indexes directly in Postgres via <code>pgvector</code>.</li>
-                </ul>
-                <div style={styles.vectorStatusBanner}>
-                  <Activity size={16} color="var(--success)" />
-                  <span style={{ fontSize: "13px", color: "var(--success)" }}>pgvector engine: online</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -642,13 +640,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
       {/* Tab: AI Assistant */}
       {activeTab === "ai-assistant" && (
         <div style={styles.content}>
-          <h3 style={styles.sectionTitle}>AI Attendance Assistant</h3>
+          <h3 style={styles.sectionTitle}>AI Assistant</h3>
           
           <div className="card" style={styles.chatCard}>
             <div style={styles.chatHeader}>
               <Bot size={22} color="var(--primary)" />
               <div style={{ textAlign: "left" }}>
-                <div style={styles.chatTitle}>Database querying AI Agent</div>
+                <div style={styles.chatTitle}>Ask Anything About Organization</div>
                 <div style={styles.chatStatus}>Can search and answer employee statistics</div>
               </div>
             </div>
@@ -666,7 +664,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
               ))}
               {loading && (
                 <div style={{ ...styles.chatMessage, alignSelf: "flex-start", background: "transparent", display: "flex", gap: "8px" }}>
-                  <Loader className="pulse-glow" size={16} /> Thinking and querying database...
+                  <Loader className="pulse-glow" size={16} /> Thinking...
                 </div>
               )}
             </div>
@@ -686,21 +684,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
         <div style={styles.content}>
           <div style={styles.sectionHeader}>
             <h3 style={styles.sectionTitle}>Organizational Performance Reports</h3>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                // Client-side export to JSON file
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(attendance, null, 2));
-                const downloadAnchor = document.createElement("a");
-                downloadAnchor.setAttribute("href", dataStr);
-                downloadAnchor.setAttribute("download", `attendance_report_${new Date().toISOString().split("T")[0]}.json`);
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-              }}
-            >
-              Export JSON Report
-            </button>
           </div>
 
           <div className="grid grid-3">
@@ -746,17 +729,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
                   const userAttendance = attendance.filter((a) => a.userId === u.id);
                   const totalHrs = userAttendance.reduce((acc, curr) => acc + (curr.workingHours || 0), 0);
                   const totalOvertime = userAttendance.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0);
+                  
                   return (
                     <tr key={u.id} style={styles.tr}>
                       <td style={styles.td}><strong>{u.firstName} {u.lastName}</strong></td>
                       <td style={styles.td}>{u.role}</td>
                       <td style={styles.td}>{userAttendance.length}</td>
-                      <td style={styles.td}>{totalHrs.toFixed(1)} hrs</td>
+                      <td style={styles.td}>{formatHours(totalHrs)}</td>
                       <td style={styles.td}>
                         {totalOvertime > 0 ? (
-                          <span className="status-badge warning">{totalOvertime.toFixed(1)} hrs</span>
+                          <span className="status-badge warning">{formatHours(totalOvertime)}</span>
                         ) : (
-                          "0.0 hrs"
+                          "0 min"
                         )}
                       </td>
                     </tr>

@@ -16,6 +16,18 @@ interface StaffPanelProps {
   activeTab: string;
 }
 
+const formatHours = (hours: number | null | undefined): string => {
+  if (hours === null || hours === undefined) return "-";
+  if (hours === 0) return "0 min";
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hrs > 0) {
+    return mins > 0 ? `${hrs}hr ${mins} min` : `${hrs}hr`;
+  }
+  return `${mins} min`;
+};
+
 export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
   const { user } = useAuth();
   const [history, setHistory] = useState<any[]>([]);
@@ -93,10 +105,10 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
     setActionLoading(true);
     try {
       await api.post("/attendance/check-in");
-      alert("Clocked in successfully!");
+      alert("Checked in successfully!");
       fetchHistory();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to clock in");
+      alert(err.response?.data?.message || "Failed to check in");
     } finally {
       setActionLoading(false);
     }
@@ -104,14 +116,14 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
 
   // Check Out Trigger
   const handleClockOut = async () => {
-    if (!confirm("Are you sure you want to Clock Out?")) return;
+    if (!confirm("Are you sure you want to Check Out?")) return;
     setActionLoading(true);
     try {
       await api.post("/attendance/check-out");
-      alert("Clocked out successfully!");
+      alert("Checked out successfully!");
       fetchHistory();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to clock out");
+      alert(err.response?.data?.message || "Failed to check out");
     } finally {
       setActionLoading(false);
     }
@@ -139,7 +151,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
 
   return (
     <div style={styles.container} className="animate-fade-in">
-      {/* Tab: Dashboard & Clock In/Out */}
+      {/* Tab: Dashboard & Check In/Out */}
       {(activeTab === "dashboard" || activeTab === "check-in-out") && (
         <div style={styles.content}>
           {/* Quick Metrics */}
@@ -150,7 +162,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
                 <div>
                   <div style={styles.statsLabel}>Total Hours Logged</div>
                   <div style={styles.statsValue}>
-                    {history.reduce((acc, curr) => acc + (curr.workingHours || 0), 0).toFixed(1)} hrs
+                    {formatHours(history.reduce((acc, curr) => acc + (curr.workingHours || 0), 0))}
                   </div>
                 </div>
               </div>
@@ -159,7 +171,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
                 <div>
                   <div style={styles.statsLabel}>Total Overtime Logged</div>
                   <div style={styles.statsValue}>
-                    {history.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0).toFixed(1)} hrs
+                    {formatHours(history.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0))}
                   </div>
                 </div>
               </div>
@@ -180,7 +192,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
             <div style={styles.clockSection}>
               <div style={styles.clockTime}>{timerString}</div>
               <div style={styles.clockLabel}>
-                {activeCheckIn ? `Currently Shift Active (Clocked In at ${new Date(activeCheckIn.checkIn).toLocaleTimeString()})` : "Shift Offline"}
+                {activeCheckIn ? `Currently Shift Active (Checked In at ${new Date(activeCheckIn.checkIn).toLocaleTimeString()})` : "Shift Offline"}
               </div>
 
               <div style={styles.clockButtons}>
@@ -192,7 +204,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
                     style={{ ...styles.clockBtn, background: "var(--success)", boxShadow: "0 4px 14px rgba(16,185,129,0.3)" }}
                   >
                     <Play size={18} />
-                    <span>Clock In / Start Shift</span>
+                    <span>Check In / Start Shift</span>
                   </button>
                 ) : (
                   <button
@@ -202,7 +214,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
                     style={styles.clockBtn}
                   >
                     <Square size={18} />
-                    <span>Clock Out / End Shift</span>
+                    <span>Check Out / End Shift</span>
                   </button>
                 )}
               </div>
@@ -214,7 +226,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
       {/* Tab: Attendance History */}
       {activeTab === "attendance-history" && (
         <div style={styles.content}>
-          <h3 style={styles.sectionTitle}>Your Clock Logs</h3>
+          <h3 style={styles.sectionTitle}>Your Check-In Logs</h3>
           <div className="card" style={styles.tableCard}>
             <table style={styles.table}>
               <thead>
@@ -232,12 +244,12 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
                     <td style={styles.td}><strong>{new Date(a.checkIn).toLocaleDateString()}</strong></td>
                     <td style={styles.td}>{new Date(a.checkIn).toLocaleTimeString()}</td>
                     <td style={styles.td}>{a.checkOut ? new Date(a.checkOut).toLocaleTimeString() : <span className="status-badge active">Online</span>}</td>
-                    <td style={styles.td}>{a.workingHours !== null ? `${a.workingHours} hrs` : "-"}</td>
+                    <td style={styles.td}>{formatHours(a.workingHours)}</td>
                     <td style={styles.td}>
                       {a.overtimeHours > 0 ? (
-                        <span className="status-badge warning">{a.overtimeHours} hrs Overtime</span>
+                        <span className="status-badge warning">{formatHours(a.overtimeHours)} Overtime</span>
                       ) : (
-                        "0 hrs"
+                        "0 min"
                       )}
                     </td>
                   </tr>

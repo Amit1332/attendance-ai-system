@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     ],
     STAFF: [
       { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
-      { id: "check-in-out", label: "Clock In/Out", icon: <Clock size={20} /> },
+      { id: "check-in-out", label: "Check In/Out", icon: <Clock size={20} /> },
       { id: "attendance-history", label: "My History", icon: <Calendar size={20} /> },
       { id: "ai-policy-assistant", label: "AI Policy Chat", icon: <Brain size={20} /> },
       { id: "profile", label: "My Profile", icon: <User size={20} /> },

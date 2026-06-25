@@ -16,6 +16,18 @@ interface ManagerPanelProps {
   activeTab: string;
 }
 
+const formatHours = (hours: number | null | undefined): string => {
+  if (hours === null || hours === undefined) return "-";
+  if (hours === 0) return "0 min";
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hrs > 0) {
+    return mins > 0 ? `${hrs}hr ${mins} min` : `${hrs}hr`;
+  }
+  return `${mins} min`;
+};
+
 export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
 
   // General States
@@ -200,7 +212,7 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
             <div className="card" style={styles.statsCard}>
               <div style={{ ...styles.statsIconWrapper, background: "var(--warning-glow)" }}><Calendar color="var(--warning)" /></div>
               <div>
-                <div style={styles.statsLabel}>Clock Ins Today</div>
+                <div style={styles.statsLabel}>Check Ins Today</div>
                 <div style={styles.statsValue}>
                   {attendance.filter(a => new Date(a.checkIn).toDateString() === new Date().toDateString()).length}
                 </div>
@@ -344,12 +356,12 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
                     <td style={styles.td}><strong>{a.user.firstName} {a.user.lastName}</strong></td>
                     <td style={styles.td}>{new Date(a.checkIn).toLocaleString()}</td>
                     <td style={styles.td}>{a.checkOut ? new Date(a.checkOut).toLocaleString() : <span className="status-badge active">Online</span>}</td>
-                    <td style={styles.td}>{a.workingHours !== null ? `${a.workingHours} hrs` : "-"}</td>
+                    <td style={styles.td}>{formatHours(a.workingHours)}</td>
                     <td style={styles.td}>
                       {a.overtimeHours > 0 ? (
-                        <span className="status-badge warning">{a.overtimeHours} hrs Overtime</span>
+                        <span className="status-badge warning">{formatHours(a.overtimeHours)} Overtime</span>
                       ) : (
-                        "0 hrs"
+                        "0 min"
                       )}
                     </td>
                   </tr>
