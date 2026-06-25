@@ -337,6 +337,23 @@ class AIService {
                     },
                 },
             },
+            {
+                type: "function",
+                function: {
+                    name: "searchEmployeeProfiles",
+                    description: "Search employee profiles (names, skills, experience, department) semantically using a natural language query. Use this tool when the user asks about specific employee skills, technology, experience, qualifications, or department roles.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            query: {
+                                type: "string",
+                                description: "The skill, experience, or department description to search for (e.g. 'React developer', 'Python experience', '5 years in Marketing')."
+                            }
+                        },
+                        required: ["query"]
+                    }
+                }
+            }
         ];
         // Maintain context messages
         const messages = [
@@ -374,7 +391,7 @@ class AIService {
                     let toolResult = "";
                     if (functionName === "getEmployeesList") {
                         const users = await prisma_1.default.user.findMany({
-                            include: { department: true },
+                            include: { department: true, embeddings: true },
                         });
                         toolResult = JSON.stringify(users.map((u) => ({
                             id: u.id,
@@ -383,6 +400,7 @@ class AIService {
                             role: u.role,
                             department: u.department?.name || "None",
                             isActive: u.isActive,
+                            profile: u.embeddings[0]?.content || "No profile details indexed",
                         })));
                     }
                     else if (functionName === "getAttendanceRecords") {
@@ -416,6 +434,24 @@ class AIService {
                             workingHours: a.workingHours,
                             overtimeHours: a.overtimeHours,
                         })));
+                    }
+                    else if (functionName === "searchEmployeeProfiles") {
+                        try {
+                            const queryText = args.query;
+                            const profiles = await this.searchEmployeesSemantically(queryText);
+                            toolResult = JSON.stringify(profiles.map((p) => ({
+                                userId: p.userId,
+                                employeeName: `${p.firstName} ${p.lastName}`,
+                                email: p.email,
+                                role: p.role,
+                                profileContent: p.content,
+                                similarity: p.similarity,
+                            })));
+                        }
+                        catch (err) {
+                            console.error("Error searching employee profiles:", err);
+                            toolResult = `Error searching employee profiles: ${err.message}`;
+                        }
                     }
                     else if (functionName === "searchCompanyPolicies" || functionName === "getHrPolicy") {
                         const queryText = args.query || args.question || question;
