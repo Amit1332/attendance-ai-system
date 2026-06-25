@@ -353,21 +353,32 @@ class AIService {
   /**
    * Search for employees semantically
    */
-  async searchEmployeesSemantically(query: string) {
+  async searchEmployeesSemantically(query: string, managerId?: string) {
     await this.ensureVectorExtension();
 
     const queryEmbedding = await this.generateEmbedding(query);
     const formattedVector = `[${queryEmbedding.join(",")}]`;
 
-    const matches: any[] = await prisma.$queryRawUnsafe(
-      `SELECT e.id, e."userId", e.content, 1 - (e.embedding <=> $1::vector) AS similarity,
+    let queryStr = `
+      SELECT e.id, e."userId", e.content, 1 - (e.embedding <=> $1::vector) AS similarity,
               u."firstName", u."lastName", u.email, u.role, u."isActive"
-       FROM "EmployeeEmbedding" e
-       JOIN "User" u ON e."userId" = u.id
-       ORDER BY e.embedding <=> $1::vector ASC
-       LIMIT 10`,
-      formattedVector
-    );
+      FROM "EmployeeEmbedding" e
+      JOIN "User" u ON e."userId" = u.id
+    `;
+    
+    const params: any[] = [formattedVector];
+
+    if (managerId) {
+      queryStr += ` WHERE u."managerId" = $2`;
+      params.push(managerId);
+    }
+
+    queryStr += `
+      ORDER BY e.embedding <=> $1::vector ASC
+      LIMIT 10
+    `;
+
+    const matches: any[] = await prisma.$queryRawUnsafe(queryStr, ...params);
 
     return matches;
   }
@@ -375,7 +386,7 @@ class AIService {
   /**
    * Answer attendance-related natural language questions using AI tool/function calling
    */
-  async askAttendanceQuestion(question: string): Promise<string> {
+  async askAttendanceQuestion(question: string, currentUser?: { id: string; role: string }): Promise<string> {
     const { client, modelName } = getAIClient();
 
     // Define DB helper tools for the AI model
@@ -456,8 +467,10 @@ class AIService {
            - Compare the check-in logs against the past weekdays (Monday to Friday, excluding future days) in the requested range.
            - Every weekday with no check-in record counts as an absence. List the absent dates or counts clearly.
         3. Attendance Rates:
-           - To find the attendance rate (e.g. 'less than 80% attendance' or 'highest rate'), compare the number of unique check-in days for each user against the total weekdays in the period.
+           - To find the attendance rate (e.g. 'less than 80% attendance' or 'highest rate'), compare the number of unique check-in days for each user against the total weekdays (Monday to Friday) in the period up to today.
            - Rate = (Unique Check-in Days / Weekdays in period) * 100%.
+           - Note: For the current month of June 2026 up to today (June 25, 2026), there are exactly 19 working days (weekdays). Use 19 as the total working days for "this month" calculations.
+           - For any employee with no attendance records in the database, count their unique check-in days as 0 (resulting in a 0% attendance rate). Do not omit them or state that you cannot calculate it.
            - For team/department attendance rates, group employees by department using 'getEmployeesList', calculate the rates for each employee, and average them for the team.
         4. Overtime:
            - Query 'getAttendanceRecords' for the period. Filter and list employees who have 'overtimeHours > 0', summarizing their total hours.
@@ -492,7 +505,12 @@ class AIService {
           let toolResult = "";
 
           if (functionName === "getEmployeesList") {
+            const userWhere: any = {};
+            if (currentUser?.role === "MANAGER") {
+              userWhere.managerId = currentUser.id;
+            }
             const users = await prisma.user.findMany({
+              where: userWhere,
               include: { department: true, embeddings: true },
             });
             toolResult = JSON.stringify(
@@ -510,6 +528,11 @@ class AIService {
             const whereClause: any = {};
             if (args.userId) {
               whereClause.userId = args.userId;
+            }
+            if (currentUser?.role === "MANAGER") {
+              whereClause.user = {
+                managerId: currentUser.id,
+              };
             }
             if (args.startDate || args.endDate) {
               whereClause.checkIn = {};
@@ -544,7 +567,8 @@ class AIService {
           } else if (functionName === "searchEmployeeProfiles") {
             try {
               const queryText = args.query;
-              const profiles = await this.searchEmployeesSemantically(queryText);
+              const managerId = currentUser?.role === "MANAGER" ? currentUser.id : undefined;
+              const profiles = await this.searchEmployeesSemantically(queryText, managerId);
               toolResult = JSON.stringify(
                 profiles.map((p) => ({
                   userId: p.userId,

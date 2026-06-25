@@ -270,7 +270,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
       {/* Tab: AI Policy Chatbot */}
       {activeTab === "ai-policy-assistant" && (
         <div style={styles.content}>
-          <h3 style={styles.sectionTitle}>AI policy assistant (RAG Pipeline)</h3>
+          <h3 style={styles.sectionTitle}>AI Policy Assistant</h3>
           
           <div className="card" style={styles.chatCard}>
             <div style={styles.chatHeader}>
@@ -294,7 +294,7 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
               ))}
               {loading && (
                 <div style={{ ...styles.chatMessage, alignSelf: "flex-start", background: "transparent", display: "flex", gap: "8px" }}>
-                  <Loader className="pulse-glow" size={16} /> Retrieving company policy embeddings...
+                  <Loader className="pulse-glow" size={16} /> Thinking...
                 </div>
               )}
             </div>

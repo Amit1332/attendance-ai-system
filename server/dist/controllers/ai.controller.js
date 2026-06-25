@@ -44,7 +44,7 @@ const askAttendanceQuestion = (0, catchAsync_1.default)(async (req, res) => {
     if (!question) {
         throw new ApiError_1.default(http_status_codes_1.HTTP_STATUS_CODES.BAD_REQUEST, "Question is required.");
     }
-    const answer = await ai_service_1.default.askAttendanceQuestion(question);
+    const answer = await ai_service_1.default.askAttendanceQuestion(question, req.user);
     res.status(http_status_codes_1.HTTP_STATUS_CODES.OK).json({
         success: true,
         data: { answer },
@@ -71,7 +71,8 @@ const searchEmployees = (0, catchAsync_1.default)(async (req, res) => {
     if (!query) {
         throw new ApiError_1.default(http_status_codes_1.HTTP_STATUS_CODES.BAD_REQUEST, "Search query is required.");
     }
-    const results = await ai_service_1.default.searchEmployeesSemantically(query);
+    const managerId = req.user.role === "MANAGER" ? req.user.id : undefined;
+    const results = await ai_service_1.default.searchEmployeesSemantically(query, managerId);
     res.status(http_status_codes_1.HTTP_STATUS_CODES.OK).json({
         success: true,
         data: results,
@@ -97,11 +98,11 @@ const saveSettings = (0, catchAsync_1.default)(async (req, res) => {
     }
     const settingsToSave = { provider };
     // Only update keys if they are not masked inputs (i.e. did not change)
-    if (openaiApiKey && openaiApiKey !== "••••••••••••") {
-        settingsToSave.openaiApiKey = openaiApiKey;
+    if (openaiApiKey !== "••••••••••••") {
+        settingsToSave.openaiApiKey = openaiApiKey || "";
     }
-    if (groqApiKey && groqApiKey !== "••••••••••••") {
-        settingsToSave.groqApiKey = groqApiKey;
+    if (groqApiKey !== "••••••••••••") {
+        settingsToSave.groqApiKey = groqApiKey || "";
     }
     const result = (0, aiSettings_1.saveAISettings)(settingsToSave);
     res.status(http_status_codes_1.HTTP_STATUS_CODES.OK).json({

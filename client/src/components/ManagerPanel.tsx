@@ -397,7 +397,7 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
               ))}
               {loading && (
                 <div style={{ ...styles.chatMessage, alignSelf: "flex-start", background: "transparent", display: "flex", gap: "8px" }}>
-                  <Loader className="pulse-glow" size={16} /> Retrieving records and analyzing...
+                  <Loader className="pulse-glow" size={16} /> Thinking...
                 </div>
               )}
             </div>
