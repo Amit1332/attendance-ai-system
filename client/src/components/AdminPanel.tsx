@@ -40,6 +40,145 @@ const formatHours = (hours: number | null | undefined): string => {
   return `${mins} min`;
 };
 
+const renderFormattedContent = (content: string) => {
+  if (!content) return null;
+
+  const formatInlineText = (text: string) => {
+    const escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+    const html = escaped
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
+      .replace(/`(.*?)`/g, "<code style='background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace;'>$1</code>");
+
+    return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  };
+
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+  
+  let currentTable: { headers: string[]; rows: string[][] } | null = null;
+  let currentList: { type: "ul" | "ol"; items: string[] } | null = null;
+
+  const pushCurrentCollections = (key: string) => {
+    if (currentTable) {
+      elements.push(
+        <div key={`table-${key}`} style={{ overflowX: "auto", margin: "12px 0", maxWidth: "100%" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid var(--border)", textAlign: "left", fontSize: "14px" }}>
+            <thead>
+              <tr style={{ background: "rgba(255,255,255,0.05)" }}>
+                {currentTable.headers.map((h, i) => (
+                  <th key={i} style={{ padding: "8px 12px", border: "1px solid var(--border)", fontWeight: "600" }}>
+                    {formatInlineText(h)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentTable.rows.map((row, rowIndex) => (
+                <tr key={rowIndex} style={{ borderBottom: "1px solid var(--border)" }}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex} style={{ padding: "8px 12px", border: "1px solid var(--border)" }}>
+                      {formatInlineText(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      currentTable = null;
+    }
+    
+    if (currentList) {
+      const Tag = currentList.type;
+      elements.push(
+        <Tag key={`list-${key}`} style={{ margin: "8px 0 8px 24px", paddingLeft: "0", textAlign: "left" }}>
+          {currentList.items.map((item, itemIndex) => (
+            <li key={itemIndex} style={{ margin: "4px 0", listStyleType: currentList?.type === "ol" ? "decimal" : "disc" }}>
+              {formatInlineText(item)}
+            </li>
+          ))}
+        </Tag>
+      );
+      currentList = null;
+    }
+  };
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx].trim();
+
+    if (line.startsWith("|") && line.endsWith("|")) {
+      pushCurrentCollections(String(idx));
+      
+      const cells = line.split("|").map(c => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
+      const isSeparator = cells.every(c => c.match(/^:-*-?:*$/) || c.startsWith("-"));
+      
+      if (isSeparator) {
+        continue;
+      }
+
+      if (!currentTable) {
+        currentTable = { headers: cells, rows: [] };
+      } else {
+        currentTable.rows.push(cells);
+      }
+      continue;
+    }
+
+    if (currentTable && (!line.startsWith("|") || !line.endsWith("|"))) {
+      pushCurrentCollections(String(idx));
+    }
+
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      const itemText = line.substring(2);
+      if (!currentList || currentList.type !== "ul") {
+        pushCurrentCollections(String(idx));
+        currentList = { type: "ul", items: [itemText] };
+      } else {
+        currentList.items.push(itemText);
+      }
+      continue;
+    }
+
+    const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (olMatch) {
+      const itemText = olMatch[2];
+      if (!currentList || currentList.type !== "ol") {
+        pushCurrentCollections(String(idx));
+        currentList = { type: "ol", items: [itemText] };
+      } else {
+        currentList.items.push(itemText);
+      }
+      continue;
+    }
+
+    if (currentList) {
+      pushCurrentCollections(String(idx));
+    }
+
+    if (line === "") {
+      elements.push(<div key={`blank-${idx}`} style={{ height: "8px" }} />);
+    } else {
+      elements.push(
+        <p key={`p-${idx}`} style={{ margin: "4px 0", lineHeight: "1.5", textAlign: "left" }}>
+          {formatInlineText(line)}
+        </p>
+      );
+    }
+  }
+
+  pushCurrentCollections("end");
+
+  return <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>{elements}</div>;
+};
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
   const { stats, liveEvents } = useSocket();
 
@@ -640,14 +779,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
       {/* Tab: AI Assistant */}
       {activeTab === "ai-assistant" && (
         <div style={styles.content}>
-          <h3 style={styles.sectionTitle}>AI Assistant</h3>
           
           <div className="card" style={styles.chatCard}>
             <div style={styles.chatHeader}>
               <Bot size={22} color="var(--primary)" />
               <div style={{ textAlign: "left" }}>
                 <div style={styles.chatTitle}>Ask Anything About Organization</div>
-                <div style={styles.chatStatus}>Can search and answer employee statistics</div>
               </div>
             </div>
 
@@ -659,7 +796,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeTab }) => {
                   background: msg.role === "user" ? "var(--primary)" : "rgba(255,255,255,0.03)",
                   border: msg.role === "user" ? "none" : "1px solid var(--border)",
                 }}>
-                  {msg.content}
+                  {msg.role === "user" ? msg.content : renderFormattedContent(msg.content)}
                 </div>
               ))}
               {loading && (
@@ -1052,7 +1189,7 @@ const styles: Record<string, React.CSSProperties> = {
   chatCard: {
     display: "flex",
     flexDirection: "column",
-    height: "500px",
+    height: "580px",
     padding: 0,
   },
   chatHeader: {

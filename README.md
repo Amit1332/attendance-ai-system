@@ -30,19 +30,17 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 ## 🚀 Setup Steps
 
 ### 1. Database Setup
-
-- Go to [Supabase](https://supabase.com) and create a free project.
-- Copy the database connection string (URI) from your database settings.
+* Go to [Supabase](https://supabase.com) and create a free project.
+* Copy the database connection string (URI) from your database settings.
 
 ---
 
 ### 2. Server Setup (Backend)
-
-- Open a terminal window and go to the `server` folder:
+* Open a terminal window and go to the `server` folder:
   ```bash
   cd server
   ```
-- Create a new file named `.env` and fill it with these keys:
+* Create a new file named `.env` and fill it with these keys:
   ```env
   PORT=5000
   DATABASE_URL="your-supabase-connection-string"
@@ -50,7 +48,7 @@ A web application for employee attendance tracking and AI-driven HR policy manag
   OPENAI_API_KEY="your-openai-api-key"
   GROQ_API_KEY="your-groq-api-key"
   ```
-- Run these commands in order:
+* Run these commands in order:
   ```bash
   npm install
   npx prisma db push
@@ -61,17 +59,16 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 ---
 
 ### 3. Client Setup (Frontend)
-
-- Open a new terminal window and go to the `client` folder:
+* Open a new terminal window and go to the `client` folder:
   ```bash
   cd client
   ```
-- Run these commands in order:
+* Run these commands in order:
   ```bash
   npm install
   npm run dev
   ```
-- Open your browser and go to: [http://localhost:5173](http://localhost:5173)
+* Open your browser and go to: [http://localhost:5173](http://localhost:5173)
 
 ---
 
@@ -108,3 +105,6 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 - in AI Assistant page hide reports tab from staff so they only see policy chat, manager and admin can switch between policy chat and reports
 - make sure routes are protected on react side, if staff try to type url manually redirect them dashboard
 - create settings page where admin can save open ai and groq key, select default provider, save to db, server should dynamic use key from database, and if blank fallback to env key
+- AI is giving back raw markdown text with asterisks and pipes, but on UI it looks bad. Write a custom response formatter in react so it renders real tables, bullet points, numbered lists, and bold text beautifully like chatgpt
+- inside the message formatter, make a loop that processes LLM output line by line. If a line starts with pipe symbols, join them into a styled html table. If it has dash/number prefixes, parse them into bullet and ordered list items
+- make sure the react custom formatter escapes raw html tags first to prevent security issues, then translates inline code backticks, asterisks for bold, and double asterisks to proper inline tags
