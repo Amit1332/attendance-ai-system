@@ -5,7 +5,7 @@ import ManagerPanel from "../components/ManagerPanel";
 import StaffPanel from "../components/StaffPanel";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
-import { Bell, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export const DashboardView: React.FC = () => {
   const { user } = useAuth();
@@ -27,9 +27,6 @@ export const DashboardView: React.FC = () => {
             <h1 style={styles.heading}>
               Good day, {user.firstName}! <Sparkles size={16} color="var(--warning)" style={{ display: "inline-block" }} />
             </h1>
-            <p style={styles.subtitle}>
-              You are signed in as <strong style={{ color: "var(--primary)" }}>{user.role}</strong>
-            </p>
           </div>
 
           <div style={styles.headerActions}>
@@ -40,10 +37,6 @@ export const DashboardView: React.FC = () => {
                 <strong>{stats.onlineCount}</strong> online • <strong>{stats.offlineCount}</strong> offline
               </span>
             </div>
-
-            <button style={styles.iconBtn}>
-              <Bell size={18} />
-            </button>
           </div>
         </header>
 

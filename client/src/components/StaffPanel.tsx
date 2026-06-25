@@ -104,9 +104,10 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
   const handleClockIn = async () => {
     setActionLoading(true);
     try {
-      await api.post("/attendance/check-in");
-      alert("Checked in successfully!");
-      fetchHistory();
+      const response = await api.post("/attendance/check-in");
+      const newRecord = response.data.data;
+      setActiveCheckIn(newRecord);
+      setHistory((prev) => [newRecord, ...prev]);
     } catch (err: any) {
       alert(err.response?.data?.message || "Failed to check in");
     } finally {
@@ -119,9 +120,12 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
     if (!confirm("Are you sure you want to Check Out?")) return;
     setActionLoading(true);
     try {
-      await api.post("/attendance/check-out");
-      alert("Checked out successfully!");
-      fetchHistory();
+      const response = await api.post("/attendance/check-out");
+      const updatedRecord = response.data.data;
+      setActiveCheckIn(null);
+      setHistory((prev) =>
+        prev.map((r) => (r.id === updatedRecord.id ? updatedRecord : r))
+      );
     } catch (err: any) {
       alert(err.response?.data?.message || "Failed to check out");
     } finally {
@@ -151,42 +155,45 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
 
   return (
     <div style={styles.container} className="animate-fade-in">
-      {/* Tab: Dashboard & Check In/Out */}
-      {(activeTab === "dashboard" || activeTab === "check-in-out") && (
+      {/* Tab: Dashboard */}
+      {activeTab === "dashboard" && (
         <div style={styles.content}>
           {/* Quick Metrics */}
-          {activeTab === "dashboard" && (
-            <div className="grid grid-3">
-              <div className="card glow-card" style={styles.statsCard}>
-                <div style={styles.statsIconWrapper}><Clock color="var(--primary)" /></div>
-                <div>
-                  <div style={styles.statsLabel}>Total Hours Logged</div>
-                  <div style={styles.statsValue}>
-                    {formatHours(history.reduce((acc, curr) => acc + (curr.workingHours || 0), 0))}
-                  </div>
-                </div>
-              </div>
-              <div className="card" style={styles.statsCard}>
-                <div style={{ ...styles.statsIconWrapper, background: "var(--success-glow)" }}><TrendingUp color="var(--success)" /></div>
-                <div>
-                  <div style={styles.statsLabel}>Total Overtime Logged</div>
-                  <div style={styles.statsValue}>
-                    {formatHours(history.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0))}
-                  </div>
-                </div>
-              </div>
-              <div className="card" style={styles.statsCard}>
-                <div style={{ ...styles.statsIconWrapper, background: "var(--warning-glow)" }}><Calendar color="var(--warning)" /></div>
-                <div>
-                  <div style={styles.statsLabel}>Total Shifts Completed</div>
-                  <div style={styles.statsValue}>
-                    {history.filter(r => r.checkOut !== null).length}
-                  </div>
+          <div className="grid grid-3">
+            <div className="card glow-card" style={styles.statsCard}>
+              <div style={styles.statsIconWrapper}><Clock color="var(--primary)" /></div>
+              <div>
+                <div style={styles.statsLabel}>Total Hours Logged</div>
+                <div style={styles.statsValue}>
+                  {formatHours(history.reduce((acc, curr) => acc + (curr.workingHours || 0), 0))}
                 </div>
               </div>
             </div>
-          )}
+            <div className="card" style={styles.statsCard}>
+              <div style={{ ...styles.statsIconWrapper, background: "var(--success-glow)" }}><TrendingUp color="var(--success)" /></div>
+              <div>
+                <div style={styles.statsLabel}>Total Overtime Logged</div>
+                <div style={styles.statsValue}>
+                  {formatHours(history.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0))}
+                </div>
+              </div>
+            </div>
+            <div className="card" style={styles.statsCard}>
+              <div style={{ ...styles.statsIconWrapper, background: "var(--warning-glow)" }}><Calendar color="var(--warning)" /></div>
+              <div>
+                <div style={styles.statsLabel}>Total Shifts Completed</div>
+                <div style={styles.statsValue}>
+                  {history.filter(r => r.checkOut !== null).length}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* Tab: Check In/Out */}
+      {activeTab === "check-in-out" && (
+        <div style={styles.content}>
           {/* Clock In Panel */}
           <div className="card glow-card" style={styles.clockCard}>
             <div style={styles.clockSection}>
