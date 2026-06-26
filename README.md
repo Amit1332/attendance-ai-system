@@ -30,17 +30,19 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 ## 🚀 Setup Steps
 
 ### 1. Database Setup
-* Go to [Supabase](https://supabase.com) and create a free project.
-* Copy the database connection string (URI) from your database settings.
+
+- Go to [Supabase](https://supabase.com) and create a free project.
+- Copy the database connection string (URI) from your database settings.
 
 ---
 
 ### 2. Server Setup (Backend)
-* Open a terminal window and go to the `server` folder:
+
+- Open a terminal window and go to the `server` folder:
   ```bash
   cd server
   ```
-* Create a new file named `.env` and fill it with these keys:
+- Create a new file named `.env` and fill it with these keys:
   ```env
   PORT=5000
   DATABASE_URL="your-supabase-connection-string"
@@ -48,7 +50,7 @@ A web application for employee attendance tracking and AI-driven HR policy manag
   OPENAI_API_KEY="your-openai-api-key"
   GROQ_API_KEY="your-groq-api-key"
   ```
-* Run these commands in order:
+- Run these commands in order:
   ```bash
   npm install
   npx prisma db push
@@ -59,20 +61,21 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 ---
 
 ### 3. Client Setup (Frontend)
-* Open a new terminal window and go to the `client` folder:
+
+- Open a new terminal window and go to the `client` folder:
   ```bash
   cd client
   ```
-* Run these commands in order:
+- Run these commands in order:
   ```bash
   npm install
   npm run dev
   ```
-* Open your browser and go to: [http://localhost:5173](http://localhost:5173)
+- Open your browser and go to: [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 💬 Developer Prompts to Setup and Create This Project
+## Developer Prompts to Setup and Create This Project
 
 - How do I set up a PostgreSQL databse on Supabase and get the connection string for my app?
 - Can you make a template for a backend `.env` file that includes PORT, DATABASE_URL, JWT_SECRET, and keys for OpenAI and Groq?
@@ -108,3 +111,5 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 - AI is giving back raw markdown text with asterisks and pipes, but on UI it looks bad. Write a custom response formatter in react so it renders real tables, bullet points, numbered lists, and bold text beautifully like chatgpt
 - inside the message formatter, make a loop that processes LLM output line by line. If a line starts with pipe symbols, join them into a styled html table. If it has dash/number prefixes, parse them into bullet and ordered list items
 - make sure the react custom formatter escapes raw html tags first to prevent security issues, then translates inline code backticks, asterisks for bold, and double asterisks to proper inline tags
+- fix intermittent `400 Failed to call a function` error with the Groq AI assistant on policy/attendance queries by adding strict tool formatting instructions and implementing fallback policy direct-RAG routing and retries
+- group employee check-in logs by date per user in the staff, manager, and admin panels. if an employee has checked in multiple times in a single day, merge them into a single row showing the overall check-in, check-out, combined working hours, and a collapsible detailed session log list
