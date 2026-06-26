@@ -77,14 +77,14 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 
 ## Developer Prompts to Setup and Create This Project
 
-- How do I set up a PostgreSQL databse on Supabase and get the connection string for my app?
-- Can you make a template for a backend `.env` file that includes PORT, DATABASE_URL, JWT_SECRET, and keys for OpenAI and Groq?
-- What commands do I need to run to install packages, push the Prisma schema to Supabase, generate the client, and start the backend server in dev mode?
-- how do I get in client folder, install react dependecies and start vite dev server
+- How to set up a PostgreSQL databse on Supabase and get the connection string for my app.
+- Can you make a template for a backend `.env` file that includes PORT, DATABASE_URL, JWT_SECRET, and keys for OpenAI and Groq.
+- What commands do I need to push the Prisma schema to Supabase, generate the client, and start the backend server in dev mode?
+- what will be the folder structure for client side and server side just show me i will approve later.
 - help me setup new project with backend folder called server using node express and frontend called client using react vite, also give a good root gitignore
 - setup typescript for express backend, I need a tsconfig file that build everything in dist folder and strict check enabled
 - create a script using prisma to seed my database with some fake user like one admin, manager and staff accounts and checkin logs so I have test data
-- can you add helmet, cors, compression, rate limiting, and request loging with morgan and winston, make sure it log request and errors nicely
+- can you add helmet, cors, compression, rate limiting, and request loging with morgan, make sure it log request and errors nicely
 - can you design prisma schema for postgresql databse for user accounts with roles ADMIN, MANAGER, STAFF and self relation for manager and staff
 - design the schema for attendance logs, each record link to user, checkin checkout dates, workign hours and overtime hours as decimals
 - write prisma models for store uploaded documents. We need Document table for meta like title and filename and DocumentChunk to store text and embedding using pgvector
@@ -101,7 +101,7 @@ A web application for employee attendance tracking and AI-driven HR policy manag
 - make sure checkin timer does not reset to zero if page refreshed, fetch active session from db and resume
 - send real time toast alert to manager dashboard when direct report checkin checkout
 - create user management list where admin can activate deactivate account or change roles with dropdown
-- let admin save/clear openai groq keys in settings, if blank use env variables
+- let admin save or clear openai groq keys in settings, if blank use env variables
 - if admin delete doc make sure it delete all chunks and embedings from database too
 - build sidebar layout where links depend on user role. if staff only show dashboard and policy chat, if manager show reports too, if admin show settings and document uploads
 - create dashboard page that change base on role: staff see own checkin timer and logs, manager see reports stats cards, admin see system stats
