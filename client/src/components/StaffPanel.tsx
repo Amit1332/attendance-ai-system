@@ -9,7 +9,9 @@ import {
   Bot,
   Send,
   Loader,
-  TrendingUp
+  TrendingUp,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 interface StaffPanelProps {
@@ -170,7 +172,54 @@ const renderFormattedContent = (content: string) => {
 export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
   const { user } = useAuth();
   const [history, setHistory] = useState<any[]>([]);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+
+  // Group history by date
+  const groupedHistory = React.useMemo(() => {
+    const groups: { [key: string]: any } = {};
+    history.forEach((record) => {
+      const date = new Date(record.checkIn);
+      const dateKey = date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          dateKey,
+          earliestCheckIn: date,
+          latestCheckOut: record.checkOut ? new Date(record.checkOut) : null,
+          totalWorkingHours: record.workingHours || 0,
+          totalOvertimeHours: record.overtimeHours || 0,
+          sessions: [record],
+          isOngoing: record.checkOut === null,
+        };
+      } else {
+        const g = groups[dateKey];
+        g.sessions.push(record);
+        
+        // Update earliest check-in
+        if (date < g.earliestCheckIn) {
+          g.earliestCheckIn = date;
+        }
+        
+        // Update latest check-out
+        if (record.checkOut === null) {
+          g.isOngoing = true;
+          g.latestCheckOut = null;
+        } else if (!g.isOngoing) {
+          const checkOutDate = new Date(record.checkOut);
+          if (!g.latestCheckOut || checkOutDate > g.latestCheckOut) {
+            g.latestCheckOut = checkOutDate;
+          }
+        }
+        
+        g.totalWorkingHours += record.workingHours || 0;
+        g.totalOvertimeHours += record.overtimeHours || 0;
+      }
+    });
+    
+    // Sort descending by date
+    return Object.values(groups).sort((a: any, b: any) => b.earliestCheckIn.getTime() - a.earliestCheckIn.getTime());
+  }, [history]);
   const [timerString, setTimerString] = useState("00:00:00");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -385,21 +434,71 @@ export const StaffPanel: React.FC<StaffPanelProps> = ({ activeTab }) => {
                 </tr>
               </thead>
               <tbody>
-                {history.map((a) => (
-                  <tr key={a.id} style={styles.tr}>
-                    <td style={styles.td}><strong>{new Date(a.checkIn).toLocaleDateString()}</strong></td>
-                    <td style={styles.td}>{new Date(a.checkIn).toLocaleTimeString()}</td>
-                    <td style={styles.td}>{a.checkOut ? new Date(a.checkOut).toLocaleTimeString() : <span className="status-badge active">Online</span>}</td>
-                    <td style={styles.td}>{formatHours(a.workingHours)}</td>
-                    <td style={styles.td}>
-                      {a.overtimeHours > 0 ? (
-                        <span className="status-badge warning">{formatHours(a.overtimeHours)} Overtime</span>
-                      ) : (
-                        "0 min"
+                {groupedHistory.map((item) => {
+                  const isExpanded = expandedDate === item.dateKey;
+                  return (
+                    <React.Fragment key={item.dateKey}>
+                      <tr 
+                        style={{ ...styles.tr, cursor: "pointer" }} 
+                        onClick={() => setExpandedDate(isExpanded ? null : item.dateKey)}
+                      >
+                        <td style={styles.td}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {isExpanded ? <ChevronUp size={16} color="var(--primary)" /> : <ChevronDown size={16} color="var(--text-secondary)" />}
+                            <strong>{item.dateKey}</strong>
+                            {item.sessions.length > 1 && (
+                              <span style={{ fontSize: "11px", background: "rgba(99,102,241,0.15)", color: "var(--primary)", padding: "2px 6px", borderRadius: "10px", marginLeft: "4px" }}>
+                                {item.sessions.length} sessions
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={styles.td}>{item.earliestCheckIn.toLocaleTimeString()}</td>
+                        <td style={styles.td}>
+                          {item.isOngoing ? (
+                            <span className="status-badge active">Online (Active)</span>
+                          ) : (
+                            item.latestCheckOut ? item.latestCheckOut.toLocaleTimeString() : "-"
+                          )}
+                        </td>
+                        <td style={styles.td}>{formatHours(item.totalWorkingHours)}</td>
+                        <td style={styles.td}>
+                          {item.totalOvertimeHours > 0 ? (
+                            <span className="status-badge warning">{formatHours(item.totalOvertimeHours)} Overtime</span>
+                          ) : (
+                            "0 min"
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={5} style={{ padding: "0 24px 20px 24px", background: "rgba(255,255,255,0.01)" }}>
+                            <div style={{ padding: "16px", borderRadius: "8px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                              <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                                Detailed Sessions for {item.dateKey}
+                              </div>
+                              {item.sessions.map((s: any, idx: number) => (
+                                <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.5fr 1.5fr 1fr 1fr", alignItems: "center", padding: "8px 12px", background: "rgba(255,255,255,0.01)", borderBottom: idx !== item.sessions.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", fontSize: "13px" }}>
+                                  <span><strong>Session {item.sessions.length - idx}</strong></span>
+                                  <span>In: {new Date(s.checkIn).toLocaleTimeString()}</span>
+                                  <span>Out: {s.checkOut ? new Date(s.checkOut).toLocaleTimeString() : <span className="status-badge active" style={{ scale: "0.85", display: "inline-block" }}>Online</span>}</span>
+                                  <span>Dur: {formatHours(s.workingHours)}</span>
+                                  <span>
+                                    {s.overtimeHours > 0 ? (
+                                      <span className="status-badge warning" style={{ scale: "0.85", display: "inline-block" }}>{formatHours(s.overtimeHours)}</span>
+                                    ) : (
+                                      "0 min"
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -9,7 +9,9 @@ import {
   Sparkles,
   Send,
   Loader,
-  Database
+  Database,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 interface ManagerPanelProps {
@@ -196,8 +198,65 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
   // General States
   const [staffList, setStaffList] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Group attendance by employee & date
+  const groupedAttendance = React.useMemo(() => {
+    const groups: { [key: string]: any } = {};
+    
+    attendance.forEach((record) => {
+      const date = new Date(record.checkIn);
+      const dateStr = date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const employeeId = record.userId;
+      const groupKey = `${employeeId}_${dateStr}`;
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          groupKey,
+          employeeId,
+          employeeName: `${record.user.firstName} ${record.user.lastName}`,
+          dateStr,
+          earliestCheckIn: date,
+          latestCheckOut: record.checkOut ? new Date(record.checkOut) : null,
+          totalWorkingHours: record.workingHours || 0,
+          totalOvertimeHours: record.overtimeHours || 0,
+          sessions: [record],
+          isOngoing: record.checkOut === null,
+        };
+      } else {
+        const g = groups[groupKey];
+        g.sessions.push(record);
+        
+        // Update earliest check-in
+        if (date < g.earliestCheckIn) {
+          g.earliestCheckIn = date;
+        }
+        
+        // Update latest check-out
+        if (record.checkOut === null) {
+          g.isOngoing = true;
+          g.latestCheckOut = null;
+        } else if (!g.isOngoing) {
+          const checkOutDate = new Date(record.checkOut);
+          if (!g.latestCheckOut || checkOutDate > g.latestCheckOut) {
+            g.latestCheckOut = checkOutDate;
+          }
+        }
+        
+        g.totalWorkingHours += record.workingHours || 0;
+        g.totalOvertimeHours += record.overtimeHours || 0;
+      }
+    });
+    
+    // Sort descending by date, then employee name
+    return Object.values(groups).sort((a: any, b: any) => {
+      const dateDiff = b.earliestCheckIn.getTime() - a.earliestCheckIn.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return a.employeeName.localeCompare(b.employeeName);
+    });
+  }, [attendance]);
 
   // Form States - Add Staff (Manager can only create STAFF)
   const [staffModalOpen, setStaffModalOpen] = useState(false);
@@ -507,6 +566,7 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
               <thead>
                 <tr>
                   <th style={styles.th}>Employee</th>
+                  <th style={styles.th}>Date</th>
                   <th style={styles.th}>Check-In</th>
                   <th style={styles.th}>Check-Out</th>
                   <th style={styles.th}>Working Hours</th>
@@ -514,21 +574,72 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
                 </tr>
               </thead>
               <tbody>
-                {attendance.map((a) => (
-                  <tr key={a.id} style={styles.tr}>
-                    <td style={styles.td}><strong>{a.user.firstName} {a.user.lastName}</strong></td>
-                    <td style={styles.td}>{new Date(a.checkIn).toLocaleString()}</td>
-                    <td style={styles.td}>{a.checkOut ? new Date(a.checkOut).toLocaleString() : <span className="status-badge active">Online</span>}</td>
-                    <td style={styles.td}>{formatHours(a.workingHours)}</td>
-                    <td style={styles.td}>
-                      {a.overtimeHours > 0 ? (
-                        <span className="status-badge warning">{formatHours(a.overtimeHours)} Overtime</span>
-                      ) : (
-                        "0 min"
+                {groupedAttendance.map((item) => {
+                  const isExpanded = expandedRow === item.groupKey;
+                  return (
+                    <React.Fragment key={item.groupKey}>
+                      <tr 
+                        style={{ ...styles.tr, cursor: "pointer" }} 
+                        onClick={() => setExpandedRow(isExpanded ? null : item.groupKey)}
+                      >
+                        <td style={styles.td}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {isExpanded ? <ChevronUp size={16} color="var(--primary)" /> : <ChevronDown size={16} color="var(--text-secondary)" />}
+                            <strong>{item.employeeName}</strong>
+                            {item.sessions.length > 1 && (
+                              <span style={{ fontSize: "11px", background: "rgba(99,102,241,0.15)", color: "var(--primary)", padding: "2px 6px", borderRadius: "10px", marginLeft: "4px" }}>
+                                {item.sessions.length} sessions
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={styles.td}><strong>{item.dateStr}</strong></td>
+                        <td style={styles.td}>{item.earliestCheckIn.toLocaleTimeString()}</td>
+                        <td style={styles.td}>
+                          {item.isOngoing ? (
+                            <span className="status-badge active">Online (Active)</span>
+                          ) : (
+                            item.latestCheckOut ? item.latestCheckOut.toLocaleTimeString() : "-"
+                          )}
+                        </td>
+                        <td style={styles.td}>{formatHours(item.totalWorkingHours)}</td>
+                        <td style={styles.td}>
+                          {item.totalOvertimeHours > 0 ? (
+                            <span className="status-badge warning">{formatHours(item.totalOvertimeHours)} Overtime</span>
+                          ) : (
+                            "0 min"
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={6} style={{ padding: "0 24px 20px 24px", background: "rgba(255,255,255,0.01)" }}>
+                            <div style={{ padding: "16px", borderRadius: "8px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                              <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                                Detailed Sessions for {item.employeeName} on {item.dateStr}
+                              </div>
+                              {item.sessions.map((s: any, idx: number) => (
+                                <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.5fr 1.5fr 1fr 1fr", alignItems: "center", padding: "8px 12px", background: "rgba(255,255,255,0.01)", borderBottom: idx !== item.sessions.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", fontSize: "13px" }}>
+                                  <span><strong>Session {item.sessions.length - idx}</strong></span>
+                                  <span>In: {new Date(s.checkIn).toLocaleTimeString()}</span>
+                                  <span>Out: {s.checkOut ? new Date(s.checkOut).toLocaleTimeString() : <span className="status-badge active" style={{ scale: "0.85", display: "inline-block" }}>Online</span>}</span>
+                                  <span>Dur: {formatHours(s.workingHours)}</span>
+                                  <span>
+                                    {s.overtimeHours > 0 ? (
+                                      <span className="status-badge warning" style={{ scale: "0.85", display: "inline-block" }}>{formatHours(s.overtimeHours)}</span>
+                                    ) : (
+                                      "0 min"
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
