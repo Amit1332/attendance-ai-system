@@ -167,6 +167,30 @@ const renderFormattedContent = (content: string) => {
   return <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>{elements}</div>;
 };
 
+const parseProfileContent = (content: string) => {
+  const info: { department?: string; skills?: string[]; experience?: string; email?: string; role?: string } = {};
+  if (!content) return info;
+
+  const deptMatch = content.match(/Department:\s*([^,]+)/);
+  if (deptMatch) info.department = deptMatch[1].trim();
+
+  const skillsMatch = content.match(/Skills:\s*([^,]+)/);
+  if (skillsMatch) {
+    info.skills = skillsMatch[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
+  }
+
+  const expMatch = content.match(/Experience:\s*([^,]+)/);
+  if (expMatch) info.experience = expMatch[1].trim();
+
+  const emailMatch = content.match(/Email:\s*([^,]+)/);
+  if (emailMatch) info.email = emailMatch[1].trim();
+
+  const roleMatch = content.match(/Role:\s*([^,]+)/);
+  if (roleMatch) info.role = roleMatch[1].trim();
+
+  return info;
+};
+
 export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
 
   // General States
@@ -551,7 +575,7 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
       {/* Tab: AI Semantic Search */}
       {activeTab === "ai-search" && (
         <div style={styles.content}>
-          <h3 style={styles.sectionTitle}>Semantic Profile Search (Vector DB)</h3>
+          <h3 style={styles.sectionTitle}>Semantic Profile Search</h3>
           
           <div className="card">
             <form onSubmit={handleSemanticSearch} style={styles.searchForm}>
@@ -568,16 +592,50 @@ export const ManagerPanel: React.FC<ManagerPanelProps> = ({ activeTab }) => {
               <div style={styles.emptySearch}>No search results. Enter a descriptive query to search employee embeddings.</div>
             ) : (
               <div style={styles.resultsGrid}>
-                {searchResults.map((res, i) => (
-                  <div key={res.id + i} className="card glow-card" style={styles.resultCard}>
-                    <div style={styles.resultHeader}>
-                      <span style={styles.resultName}>{res.firstName} {res.lastName}</span>
-                      <span style={styles.similarityScore}>Similarity: {Math.round(res.similarity * 100)}%</span>
+                {searchResults.map((res, i) => {
+                  const info = parseProfileContent(res.content);
+                  return (
+                    <div key={res.id + i} className="card glow-card" style={styles.resultCard}>
+                      <div style={styles.resultHeader}>
+                        <span style={styles.resultName}>{res.firstName} {res.lastName}</span>
+                      </div>
+                      <div style={styles.resultRole}>{res.role} • {res.email}</div>
+                      
+                      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {info.department && (
+                          <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                            <strong style={{ color: "var(--text-primary)" }}>Department:</strong> {info.department}
+                          </div>
+                        )}
+                        {info.experience && (
+                          <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                            <strong style={{ color: "var(--text-primary)" }}>Experience:</strong> {info.experience}
+                          </div>
+                        )}
+                        {info.skills && info.skills.length > 0 && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)" }}>Skills:</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                              {info.skills.map((skill, idx) => (
+                                <span key={idx} style={{
+                                  fontSize: "12px",
+                                  background: "rgba(99,102,241,0.12)",
+                                  color: "var(--primary)",
+                                  padding: "4px 10px",
+                                  borderRadius: "16px",
+                                  fontWeight: 500,
+                                  border: "1px solid rgba(99,102,241,0.2)"
+                                }}>
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={styles.resultRole}>{res.role} • {res.email}</div>
-                    <div style={styles.resultBody}>{res.content}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
